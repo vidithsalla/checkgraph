@@ -1,0 +1,73 @@
+import type { CanonicalSeedScenario } from "./types";
+
+export const preauthConfusionScenario: CanonicalSeedScenario = {
+  scenarioId: "SCN_PREAUTH_CONFUSION",
+  title: "Preauth Confusion",
+  purpose:
+    "Show a captured payment where the temporary hold still appears and could confuse the diner.",
+  restaurantSlug: "sable-nyc",
+  check: {
+    externalCheckRef: "CHK-SBL-20260328-007",
+    tableLabel: "7",
+    serviceChannel: "table_service",
+    partySize: 3,
+    subtotalAmountCents: 8900,
+    taxAmountCents: 790,
+    tipAmountCents: 1800,
+    totalAmountCents: 11490,
+    openedAt: "2026-03-28T19:02:00-04:00",
+  },
+  primaryGuestKey: "maya-patel",
+  payerGuestKey: "maya-patel",
+  fragments: [
+    {
+      sourceSystem: "mobile_app",
+      externalIdentityRef: "acct_maya_01",
+      rawName: "Maya Patel",
+      rawPhone: "718-555-0104",
+      rawEmail: "maya.patel@example.com",
+      paymentAlias: "card_4242",
+      guestKey: "maya-patel",
+    },
+  ],
+  events: [
+    { type: "check_created", occurredAt: "2026-03-28T19:02:00-04:00" },
+    { type: "check_opened", occurredAt: "2026-03-28T19:03:00-04:00" },
+    { type: "guest_checkin_detected", occurredAt: "2026-03-28T19:04:00-04:00" },
+    { type: "payment_method_attached", occurredAt: "2026-03-28T19:44:00-04:00" },
+    {
+      type: "preauth_placed",
+      occurredAt: "2026-03-28T19:44:05-04:00",
+      payload: { amountCents: 11490, paymentAlias: "card_4242", holdWindowHours: 24 },
+    },
+    { type: "items_synced", occurredAt: "2026-03-28T19:45:00-04:00" },
+    { type: "payment_authorization_requested", occurredAt: "2026-03-28T19:46:00-04:00" },
+    {
+      type: "payment_authorized",
+      occurredAt: "2026-03-28T19:46:04-04:00",
+      payload: { amountCents: 11490, authorizationRef: "auth_01", paymentAlias: "card_4242" },
+    },
+    { type: "payment_capture_requested", occurredAt: "2026-03-28T19:52:00-04:00" },
+    {
+      type: "payment_captured",
+      occurredAt: "2026-03-28T19:52:06-04:00",
+      payload: { amountCents: 11490, captureRef: "cap_01", paymentAlias: "card_4242" },
+    },
+    { type: "final_receipt_received", occurredAt: "2026-03-28T19:53:00-04:00" },
+    { type: "rewards_eligibility_confirmed", occurredAt: "2026-03-28T19:53:12-04:00" },
+    { type: "rewards_post_requested", occurredAt: "2026-03-28T19:53:16-04:00" },
+    { type: "rewards_posted", occurredAt: "2026-03-28T19:53:24-04:00" },
+    { type: "check_closed", occurredAt: "2026-03-28T19:54:00-04:00" },
+  ],
+  expected: {
+    paymentState: "closed",
+    receiptState: "received",
+    rewardsState: "posted",
+    identityState: "linked_confident",
+    exceptionState: "warning",
+    serviceState: "completed",
+    nextActionOwner: "support",
+    nextActionText: "Explain hold versus captured charge and monitor release timing.",
+    exceptions: ["stale_preauth_visibility"],
+  },
+};

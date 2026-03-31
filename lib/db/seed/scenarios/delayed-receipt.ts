@@ -1,0 +1,61 @@
+import type { CanonicalSeedScenario } from "./types";
+
+export const delayedReceiptScenario: CanonicalSeedScenario = {
+  scenarioId: "SCN_DELAYED_RECEIPT",
+  title: "Delayed Final Receipt",
+  purpose:
+    "Show a normal payment that has captured, but final receipt has not arrived yet, so rewards remain pending.",
+  restaurantSlug: "sable-nyc",
+  check: {
+    externalCheckRef: "CHK-SBL-20260328-015",
+    tableLabel: "15",
+    serviceChannel: "table_service",
+    partySize: 2,
+    subtotalAmountCents: 6700,
+    taxAmountCents: 600,
+    tipAmountCents: 1400,
+    totalAmountCents: 8700,
+    openedAt: "2026-03-28T19:12:00-04:00",
+  },
+  primaryGuestKey: "leah-kim",
+  payerGuestKey: "leah-kim",
+  fragments: [
+    {
+      sourceSystem: "mobile_app",
+      externalIdentityRef: "acct_leah_01",
+      rawName: "Leah Kim",
+      rawPhone: "(646) 555-0172",
+      rawEmail: "leah.kim@example.com",
+      guestKey: "leah-kim",
+    },
+  ],
+  events: [
+    { type: "check_created", occurredAt: "2026-03-28T19:12:00-04:00" },
+    { type: "check_opened", occurredAt: "2026-03-28T19:13:00-04:00" },
+    { type: "guest_checkin_detected", occurredAt: "2026-03-28T19:15:00-04:00" },
+    { type: "items_synced", occurredAt: "2026-03-28T19:58:00-04:00" },
+    { type: "payment_method_attached", occurredAt: "2026-03-28T19:59:00-04:00" },
+    { type: "payment_authorization_requested", occurredAt: "2026-03-28T20:00:00-04:00" },
+    { type: "payment_authorized", occurredAt: "2026-03-28T20:00:04-04:00" },
+    { type: "payment_capture_requested", occurredAt: "2026-03-28T20:01:00-04:00" },
+    { type: "payment_captured", occurredAt: "2026-03-28T20:01:05-04:00" },
+    { type: "receipt_itemization_unavailable", occurredAt: "2026-03-28T20:02:00-04:00" },
+    { type: "final_receipt_missing_timeout", occurredAt: "2026-03-28T20:20:00-04:00" },
+    { type: "rewards_eligibility_confirmed", occurredAt: "2026-03-28T20:21:00-04:00" },
+  ],
+  expected: {
+    paymentState: "captured",
+    receiptState: "missing_after_timeout",
+    rewardsState: "awaiting_final_receipt",
+    identityState: "linked_confident",
+    exceptionState: "action_required",
+    serviceState: "awaiting_backend_completion",
+    nextActionOwner: "manager",
+    nextActionText: "Verify final receipt ingestion before escalating the rewards issue.",
+    exceptions: [
+      "final_receipt_missing_after_timeout",
+      "receipt_itemization_unavailable",
+      "rewards_waiting_on_final_receipt",
+    ],
+  },
+};

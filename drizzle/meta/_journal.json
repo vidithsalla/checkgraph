@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1774908000000,
+      "tag": "0000_checkgraph_initial",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774913400000,
+      "tag": "0001_hosted_deposit_slice",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774927200000,
+      "tag": "0002_hosted_partial_coverage",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774933200000,
+      "tag": "0003_cancelled_booking_deposit_refund",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774935000000,
+      "tag": "0004_duplicate_capture_close_missing",
+      "breakpoints": true
+    }
+  ]
+}

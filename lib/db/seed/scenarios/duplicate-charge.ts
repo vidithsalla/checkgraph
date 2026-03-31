@@ -1,0 +1,65 @@
+import type { CanonicalSeedScenario } from "./types";
+
+export const duplicateChargeScenario: CanonicalSeedScenario = {
+  scenarioId: "SCN_DUPLICATE_CHARGE",
+  title: "Duplicate Charge Suspicion",
+  purpose: "Show a retry or repeated capture flow that looks like a duplicate charge.",
+  restaurantSlug: "northline-bar",
+  check: {
+    externalCheckRef: "CHK-NLB-20260328-004",
+    tableLabel: "BAR-04",
+    serviceChannel: "bar_tab",
+    partySize: 1,
+    subtotalAmountCents: 4200,
+    taxAmountCents: 370,
+    tipAmountCents: 1000,
+    totalAmountCents: 5570,
+    openedAt: "2026-03-28T21:06:00-04:00",
+  },
+  primaryGuestKey: "ethan-brooks",
+  payerGuestKey: "ethan-brooks",
+  fragments: [
+    {
+      sourceSystem: "mobile_app",
+      externalIdentityRef: "acct_ethan_01",
+      rawName: "Ethan Brooks",
+      rawPhone: "(646) 555-0194",
+      rawEmail: "ethan.brooks@example.com",
+      paymentAlias: "wallet_8841",
+      guestKey: "ethan-brooks",
+    },
+  ],
+  events: [
+    { type: "check_created", occurredAt: "2026-03-28T21:06:00-04:00" },
+    { type: "check_opened", occurredAt: "2026-03-28T21:07:00-04:00" },
+    { type: "guest_checkin_detected", occurredAt: "2026-03-28T21:08:00-04:00" },
+    { type: "items_synced", occurredAt: "2026-03-28T21:36:00-04:00" },
+    { type: "payment_method_attached", occurredAt: "2026-03-28T21:37:00-04:00" },
+    { type: "payment_authorization_requested", occurredAt: "2026-03-28T21:38:00-04:00" },
+    { type: "payment_authorized", occurredAt: "2026-03-28T21:38:03-04:00" },
+    { type: "payment_capture_requested", occurredAt: "2026-03-28T21:39:00-04:00" },
+    { type: "payment_captured", occurredAt: "2026-03-28T21:39:05-04:00" },
+    { type: "payment_capture_requested", occurredAt: "2026-03-28T21:39:12-04:00" },
+    { type: "payment_captured", occurredAt: "2026-03-28T21:39:19-04:00" },
+    { type: "duplicate_charge_suspected", occurredAt: "2026-03-28T21:39:22-04:00" },
+    { type: "support_case_created", occurredAt: "2026-03-28T21:40:00-04:00" },
+  ],
+  supportCase: {
+    status: "open",
+    summary:
+      "Guest reports two charges visible; timeline indicates two capture events within seconds.",
+    guestVisibleSummary:
+      "We are reviewing a possible duplicate capture and will confirm the final charge status.",
+  },
+  expected: {
+    paymentState: "captured",
+    receiptState: "pending",
+    rewardsState: "awaiting_final_receipt",
+    identityState: "linked_confident",
+    exceptionState: "urgent",
+    serviceState: "blocked",
+    nextActionOwner: "support",
+    nextActionText: "Investigate duplicate capture before communicating final charge status.",
+    exceptions: ["duplicate_charge_suspected", "duplicate_capture_close_missing"],
+  },
+};

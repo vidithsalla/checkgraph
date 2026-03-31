@@ -1,0 +1,92 @@
+import type { CanonicalSeedScenario } from "./types";
+
+export const payerMismatchScenario: CanonicalSeedScenario = {
+  scenarioId: "SCN_PAYER_MISMATCH",
+  title: "Payer Does Not Match Reservation Holder",
+  purpose:
+    "Show a realistic identity problem where the reservation holder and payer are different people.",
+  restaurantSlug: "sable-nyc",
+  check: {
+    externalCheckRef: "CHK-SBL-20260328-021",
+    tableLabel: "21",
+    serviceChannel: "table_service",
+    partySize: 4,
+    subtotalAmountCents: 18300,
+    taxAmountCents: 1625,
+    tipAmountCents: 3600,
+    totalAmountCents: 23525,
+    reservationRef: "RES-SBL-2107",
+    openedAt: "2026-03-28T20:04:00-04:00",
+  },
+  primaryGuestKey: "sophia-grant",
+  payerGuestKey: "sophia-grant",
+  reservationGuestKey: "jonathan-reed",
+  fragments: [
+    {
+      sourceSystem: "identity_service",
+      externalIdentityRef: "res_jonathan_01",
+      rawName: "Jonathan Reed",
+      reservationRef: "RES-SBL-2107",
+      guestKey: "jonathan-reed",
+    },
+    {
+      sourceSystem: "terminal",
+      externalIdentityRef: "pay_sophia_01",
+      rawName: "S. Grant",
+      paymentAlias: "card_1881",
+    },
+    {
+      sourceSystem: "mobile_app",
+      externalIdentityRef: "acct_sophia_01",
+      rawName: "Sophia Grant",
+      rawPhone: "212-555-0125",
+      rawEmail: "sophia.grant@example.com",
+      guestKey: "sophia-grant",
+    },
+  ],
+  matchSuggestions: [
+    {
+      fragmentRef: "pay_sophia_01",
+      candidateGuestKey: "sophia-grant",
+      confidenceScore: 0.88,
+      matchBand: "medium",
+      reasons: ["Phone and app identity align to Sophia Grant", "Payment alias appears on prior visit"],
+      conflicts: ["Reservation holder is Jonathan Reed"],
+      suggestedAction: "Confirm payer-versus-reservation split",
+    },
+  ],
+  events: [
+    { type: "check_created", occurredAt: "2026-03-28T20:04:00-04:00" },
+    { type: "check_opened", occurredAt: "2026-03-28T20:05:00-04:00" },
+    {
+      type: "reservation_attached",
+      occurredAt: "2026-03-28T20:06:00-04:00",
+      payload: { reservationRef: "RES-SBL-2107", reservationName: "Jonathan Reed", partySize: 4 },
+    },
+    { type: "guest_checkin_detected", occurredAt: "2026-03-28T20:08:00-04:00" },
+    {
+      type: "payment_identity_detected",
+      occurredAt: "2026-03-28T20:56:00-04:00",
+      payload: { paymentAlias: "card_1881", payerDisplayName: "S. Grant", billingZipSuffix: "10011" },
+    },
+    { type: "payer_reservation_mismatch_detected", occurredAt: "2026-03-28T20:56:06-04:00" },
+    { type: "items_synced", occurredAt: "2026-03-28T20:57:00-04:00" },
+    { type: "payment_authorization_requested", occurredAt: "2026-03-28T20:58:00-04:00" },
+    { type: "payment_authorized", occurredAt: "2026-03-28T20:58:03-04:00" },
+    { type: "payment_capture_requested", occurredAt: "2026-03-28T21:04:00-04:00" },
+    { type: "payment_captured", occurredAt: "2026-03-28T21:04:06-04:00" },
+    { type: "final_receipt_received", occurredAt: "2026-03-28T21:05:00-04:00" },
+  ],
+  expected: {
+    paymentState: "captured",
+    receiptState: "received",
+    rewardsState: "ready_to_post",
+    identityState: "mismatch_flagged",
+    exceptionState: "warning",
+    serviceState: "awaiting_staff_action",
+    nextActionOwner: "manager",
+    nextActionText:
+      "Confirm payer-versus-reservation relationship before linking rewards or closing the identity issue.",
+    exceptions: ["payer_reservation_mismatch"],
+  },
+};

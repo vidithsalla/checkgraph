@@ -1,0 +1,70 @@
+import type { CanonicalSeedScenario } from "./types";
+
+export const vipLinkingScenario: CanonicalSeedScenario = {
+  scenarioId: "SCN_VIP_NOT_LINKED",
+  title: "Existing VIP Guest Not Linked",
+  purpose:
+    "Show fragmented identity where the right guest exists, but current check is only weakly linked until operator review.",
+  restaurantSlug: "sable-nyc",
+  check: {
+    externalCheckRef: "CHK-SBL-20260329-005",
+    tableLabel: "5",
+    serviceChannel: "table_service",
+    partySize: 2,
+    subtotalAmountCents: 14900,
+    taxAmountCents: 1320,
+    tipAmountCents: 3000,
+    totalAmountCents: 19220,
+    openedAt: "2026-03-29T20:12:00-04:00",
+  },
+  primaryGuestKey: "ava-chen",
+  payerGuestKey: "ava-chen",
+  fragments: [
+    {
+      sourceSystem: "mobile_app",
+      externalIdentityRef: "acct_ava_short_01",
+      rawName: "A. Chen",
+      rawPhone: "917-555-0131",
+      paymentAlias: "card_9027",
+    },
+  ],
+  matchSuggestions: [
+    {
+      fragmentRef: "acct_ava_short_01",
+      candidateGuestKey: "ava-chen",
+      confidenceScore: 0.78,
+      matchBand: "medium",
+      reasons: ["Payment alias seen on prior linked visit", "Phone suffix matches 0131"],
+      conflicts: ["Reservation not present for this check"],
+      suggestedAction: "Confirm VIP guest link",
+    },
+  ],
+  events: [
+    { type: "check_created", occurredAt: "2026-03-29T20:12:00-04:00" },
+    { type: "check_opened", occurredAt: "2026-03-29T20:13:00-04:00" },
+    {
+      type: "payment_identity_detected",
+      occurredAt: "2026-03-29T20:51:00-04:00",
+      payload: { paymentAlias: "card_9027", payerDisplayName: "A. Chen", billingZipSuffix: "10012" },
+    },
+    { type: "guest_checkin_detected", occurredAt: "2026-03-29T20:52:00-04:00" },
+    { type: "identity_match_suggested", occurredAt: "2026-03-29T20:52:10-04:00" },
+    { type: "items_synced", occurredAt: "2026-03-29T20:53:00-04:00" },
+    { type: "payment_authorization_requested", occurredAt: "2026-03-29T20:54:00-04:00" },
+    { type: "payment_authorized", occurredAt: "2026-03-29T20:54:04-04:00" },
+    { type: "payment_capture_requested", occurredAt: "2026-03-29T21:01:00-04:00" },
+    { type: "payment_captured", occurredAt: "2026-03-29T21:01:07-04:00" },
+    { type: "final_receipt_received", occurredAt: "2026-03-29T21:02:00-04:00" },
+  ],
+  expected: {
+    paymentState: "captured",
+    receiptState: "received",
+    rewardsState: "ready_to_post",
+    identityState: "linked_low_confidence",
+    exceptionState: "warning",
+    serviceState: "awaiting_staff_action",
+    nextActionOwner: "manager",
+    nextActionText: "Review the suggested VIP guest link before resolving identity state.",
+    exceptions: ["vip_profile_not_linked", "low_confidence_guest_assignment"],
+  },
+};
