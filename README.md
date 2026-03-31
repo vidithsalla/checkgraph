@@ -86,7 +86,7 @@ What gets updated:
 - derived state and exceptions are recomputed
 - support export reflects the new funding composition
 
-![Hosted deposit unapplied operator flow](public/screenshots/hosted-deposit-unapplied.png)
+![Hosted deposit unapplied operator flow](public/screenshots/checks:CHK-ORE-20260330-011(readme-ready).png)
 
 *Hosted event check with a captured deposit that has not yet been applied to the final check.*
 
@@ -118,9 +118,11 @@ What gets updated:
 - next action shifts from manager triage to refund follow-through
 - support export explains that refund processing is pending, not complete
 
-![Cancelled booking with refund pending](public/screenshots/cancelled-booking-refund-pending.png)
+![Cancelled booking with refund pending](public/screenshots/checks:CHK-ORE-20260331-033(1).png)
 
 *Cancelled booking where the deposit outcome has been moved into refund follow-through.*
+
+Additional screenshots are available in `public/screenshots/`.
 
 ## 6. Earlier verified supporting slice
 Checkgraph also includes an earlier live-verified recovery slice for fallback and terminal-degradation cases:
