@@ -86,6 +86,10 @@ What gets updated:
 - derived state and exceptions are recomputed
 - support export reflects the new funding composition
 
+![Hosted deposit unapplied operator flow](public/screenshots/hosted-deposit-unapplied.png)
+
+*Hosted event check with a captured deposit that has not yet been applied to the final check.*
+
 ### Apply Hosted Coverage To Check
 Operational problem:
 - the booking has available hosted coverage, but the check still shows too much guest-paid remainder
@@ -113,6 +117,10 @@ What gets updated:
 - cancellation/deposit exception resolves
 - next action shifts from manager triage to refund follow-through
 - support export explains that refund processing is pending, not complete
+
+![Cancelled booking with refund pending](public/screenshots/cancelled-booking-refund-pending.png)
+
+*Cancelled booking where the deposit outcome has been moved into refund follow-through.*
 
 ## 6. Earlier verified supporting slice
 Checkgraph also includes an earlier live-verified recovery slice for fallback and terminal-degradation cases:
