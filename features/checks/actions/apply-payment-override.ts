@@ -2,6 +2,11 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import {
+  ActionValidationError,
+  idleActionResult,
+  type ActionResult,
+} from "@/features/checks/actions/action-result";
 import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { getNextSequenceNo, recomputeCheck } from "@/lib/server/checks/recompute-check";
@@ -13,26 +18,23 @@ const overrideSchema = z.object({
   reason: z.string().trim().min(10).max(400),
 });
 
-export async function applyPaymentOverride(formData: FormData) {
-  const parsed = overrideSchema.parse({
-    checkId: formData.get("checkId"),
-    externalCheckRef: formData.get("externalCheckRef"),
-    reason: formData.get("reason"),
-  });
+export type ApplyPaymentOverrideInput = z.infer<typeof overrideSchema>;
+
+export async function applyPaymentOverrideMutation(parsed: ApplyPaymentOverrideInput) {
   const { actorRole, actorId } = assertPrototypeActor(["manager", "admin"]);
 
   await db.transaction(async (tx) => {
     const snapshot = await loadWriteSnapshot(tx, parsed.checkId);
 
     if (snapshot.check.externalCheckRef !== parsed.externalCheckRef) {
-      throw new Error("External check reference does not match the current check.");
+      throw new ActionValidationError("External check reference does not match the current check.");
     }
 
     if (
       snapshot.derivedState?.paymentState === "closed" ||
       snapshot.derivedState?.serviceState === "completed"
     ) {
-      throw new Error("Payment confirmation override is not allowed on a completed check.");
+      throw new ActionValidationError("Payment confirmation override is not allowed on a completed check.");
     }
 
     if (
@@ -43,7 +45,7 @@ export async function applyPaymentOverride(formData: FormData) {
       !snapshot.activeExceptionTypes.has("terminal_offline_during_close") &&
       !snapshot.activeExceptionTypes.has("fallback_mode_unresolved")
     ) {
-      throw new Error(
+      throw new ActionValidationError(
         "Payment confirmation override is only allowed for active fallback or terminal-degradation cases.",
       );
     }
@@ -54,7 +56,7 @@ export async function applyPaymentOverride(formData: FormData) {
       !snapshot.activeExceptionTypes.has("terminal_offline_during_close") &&
       !snapshot.activeExceptionTypes.has("fallback_mode_unresolved")
     ) {
-      throw new Error("Payment confirmation override was already applied for this check.");
+      throw new ActionValidationError("Payment confirmation override was already applied for this check.");
     }
 
     const sequenceNo = await getNextSequenceNo(tx, parsed.checkId);
@@ -90,8 +92,44 @@ export async function applyPaymentOverride(formData: FormData) {
 
     await recomputeCheck(tx, parsed.checkId);
   });
+}
 
-  revalidatePath("/overview");
-  revalidatePath("/exceptions");
-  revalidatePath(`/checks/${parsed.externalCheckRef}`);
+export async function applyPaymentOverride(
+  _previousState: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    const parsed = overrideSchema.parse({
+      checkId: formData.get("checkId"),
+      externalCheckRef: formData.get("externalCheckRef"),
+      reason: formData.get("reason"),
+    });
+
+    await applyPaymentOverrideMutation(parsed);
+
+    revalidatePath("/overview");
+    revalidatePath("/exceptions");
+    revalidatePath(`/checks/${parsed.externalCheckRef}`);
+    return idleActionResult;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        status: "error",
+        message: "Please provide a clear reason before confirming payment manually.",
+      };
+    }
+
+    if (error instanceof ActionValidationError) {
+      return {
+        status: "error",
+        message: error.message,
+      };
+    }
+
+    console.error("applyPaymentOverride failed", error);
+    return {
+      status: "error",
+      message: "Unable to complete this action right now. Refresh the page and try again.",
+    };
+  }
 }

@@ -9,6 +9,8 @@
     "lint": "next lint",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
     "test:domain": "node --import tsx --test tests/domain/scenario-expectations.test.ts",
+    "test:integration": "node --import tsx --test tests/integration/mounted-write-flows.test.ts",
+    "test:smoke:deposit": "node --import tsx --test tests/smoke/apply-deposit-request-context.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "seed": "tsx scripts/seed.ts"

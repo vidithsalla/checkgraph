@@ -21,3 +21,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export const db = drizzle(sql, { schema });
+
+export async function closeDb() {
+  await sql.end({ timeout: 1 });
+}

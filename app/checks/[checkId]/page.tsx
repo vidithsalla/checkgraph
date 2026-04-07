@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { applyPaymentOverride } from "@/features/checks/actions/apply-payment-override";
 import { applyDepositToCheck } from "@/features/checks/actions/apply-deposit-to-check";
 import { applyHostedCoverageToCheck } from "@/features/checks/actions/apply-hosted-coverage-to-check";
 import { markDepositForRefund } from "@/features/checks/actions/mark-deposit-for-refund";
@@ -8,6 +9,7 @@ import { CheckStateCard } from "@/features/checks/components/check-state-card";
 import { CheckTimeline } from "@/features/checks/components/check-timeline";
 import { DepositStateCard } from "@/features/checks/components/deposit-state-card";
 import { FundingCompositionCard } from "@/features/checks/components/funding-composition-card";
+import { GuardedActionForm } from "@/features/checks/components/guarded-action-form";
 import { GuestRolesCard } from "@/features/checks/components/guest-roles-card";
 import { describeFundingReconciliationState } from "@/lib/domain/allocations/describe-funding-reconciliation-state";
 import { describeServiceState } from "@/lib/domain/state/describe-service-state";
@@ -45,6 +47,18 @@ export default async function CheckDetailPage({
       )
     : 0;
   const refundableDepositAmount = primaryDeposit?.refundableAmountCents ?? 0;
+  const fallbackExceptionTypes = new Set([
+    "network_degraded_during_payment",
+    "terminal_offline_during_close",
+    "fallback_mode_unresolved",
+  ]);
+  const activeFallbackExceptions = detail.activeExceptions.filter((exception) =>
+    fallbackExceptionTypes.has(exception.exceptionType),
+  );
+  const paymentConfirmationAvailable =
+    activeFallbackExceptions.length > 0 &&
+    detail.derivedState?.paymentState !== "closed" &&
+    detail.derivedState?.serviceState !== "completed";
   const cancelledBookingNeedsRefund =
     detail.booking?.status === "cancelled" &&
     primaryDeposit !== null &&
@@ -142,6 +156,34 @@ export default async function CheckDetailPage({
           />
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+              Mark Payment Confirmed
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              Record a manual payment confirmation for active fallback or terminal-degradation cases
+              without rewriting external payment lifecycle truth.
+            </p>
+            {paymentConfirmationAvailable ? (
+              <GuardedActionForm
+                action={applyPaymentOverride}
+                hiddenFields={[
+                  { name: "checkId", value: detail.check.id },
+                  { name: "externalCheckRef", value: detail.check.externalCheckRef },
+                ]}
+                summary={`Clearing ${activeFallbackExceptions.length} fallback-related exception${activeFallbackExceptions.length === 1 ? "" : "s"} on ${detail.check.externalCheckRef}`}
+                placeholder="Reason for manual payment confirmation"
+                buttonLabel="Mark Payment Confirmed"
+                pendingLabel="Confirming Payment..."
+                buttonClassName="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:border-emerald-400 hover:bg-emerald-500/15"
+              />
+            ) : (
+              <p className="mt-4 text-sm text-slate-400">
+                No active fallback or terminal-degradation payment confirmation action is currently
+                required for this check.
+              </p>
+            )}
+          </section>
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
               Apply Deposit To Check
             </h3>
             <p className="mt-3 text-sm leading-6 text-slate-400">
@@ -152,33 +194,21 @@ export default async function CheckDetailPage({
             detail.booking.status !== "cancelled" &&
             primaryDeposit &&
             unappliedDepositAmount > 0 ? (
-              <form action={applyDepositToCheck} className="mt-4 space-y-3">
-                <input type="hidden" name="checkId" value={detail.check.id} />
-                <input
-                  type="hidden"
-                  name="externalCheckRef"
-                  value={detail.check.externalCheckRef}
-                />
-                <input type="hidden" name="bookingRef" value={detail.booking.bookingRef} />
-                <input type="hidden" name="depositRef" value={primaryDeposit.depositRef} />
-                <input type="hidden" name="amountCents" value={unappliedDepositAmount} />
-                <p className="rounded-xl border border-white/8 bg-black/10 px-4 py-3 text-sm text-slate-300">
-                  Applying {formatMoney(unappliedDepositAmount)} from {primaryDeposit.depositRef}
-                </p>
-                <textarea
-                  name="reason"
-                  required
-                  minLength={10}
-                  className="min-h-28 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
-                  placeholder="Reason for deposit application"
-                />
-                <button
-                  type="submit"
-                  className="rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-100 transition hover:border-amber-400 hover:bg-amber-500/15"
-                >
-                  Apply Deposit To Check
-                </button>
-              </form>
+              <GuardedActionForm
+                action={applyDepositToCheck}
+                hiddenFields={[
+                  { name: "checkId", value: detail.check.id },
+                  { name: "externalCheckRef", value: detail.check.externalCheckRef },
+                  { name: "bookingRef", value: detail.booking.bookingRef },
+                  { name: "depositRef", value: primaryDeposit.depositRef },
+                  { name: "amountCents", value: unappliedDepositAmount },
+                ]}
+                summary={`Applying ${formatMoney(unappliedDepositAmount)} from ${primaryDeposit.depositRef}`}
+                placeholder="Reason for deposit application"
+                buttonLabel="Apply Deposit To Check"
+                pendingLabel="Applying Deposit..."
+                buttonClassName="rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-100 transition hover:border-amber-400 hover:bg-amber-500/15"
+              />
             ) : (
               <p className="mt-4 text-sm text-slate-400">
                 {detail.booking?.status === "cancelled"
@@ -198,33 +228,20 @@ export default async function CheckDetailPage({
             {detail.booking &&
             detail.booking.status !== "cancelled" &&
             unappliedHostedAmount > 0 ? (
-              <form action={applyHostedCoverageToCheck} className="mt-4 space-y-3">
-                <input type="hidden" name="checkId" value={detail.check.id} />
-                <input
-                  type="hidden"
-                  name="externalCheckRef"
-                  value={detail.check.externalCheckRef}
-                />
-                <input type="hidden" name="bookingRef" value={detail.booking.bookingRef} />
-                <input type="hidden" name="amountCents" value={unappliedHostedAmount} />
-                <p className="rounded-xl border border-white/8 bg-black/10 px-4 py-3 text-sm text-slate-300">
-                  Applying {formatMoney(unappliedHostedAmount)} of hosted coverage from{" "}
-                  {detail.booking.bookingRef}
-                </p>
-                <textarea
-                  name="reason"
-                  required
-                  minLength={10}
-                  className="min-h-28 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
-                  placeholder="Reason for hosted coverage application"
-                />
-                <button
-                  type="submit"
-                  className="rounded-full border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-400 hover:bg-sky-500/15"
-                >
-                  Apply Hosted Coverage To Check
-                </button>
-              </form>
+              <GuardedActionForm
+                action={applyHostedCoverageToCheck}
+                hiddenFields={[
+                  { name: "checkId", value: detail.check.id },
+                  { name: "externalCheckRef", value: detail.check.externalCheckRef },
+                  { name: "bookingRef", value: detail.booking.bookingRef },
+                  { name: "amountCents", value: unappliedHostedAmount },
+                ]}
+                summary={`Applying ${formatMoney(unappliedHostedAmount)} of hosted coverage from ${detail.booking.bookingRef}`}
+                placeholder="Reason for hosted coverage application"
+                buttonLabel="Apply Hosted Coverage To Check"
+                pendingLabel="Applying Hosted Coverage..."
+                buttonClassName="rounded-full border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-400 hover:bg-sky-500/15"
+              />
             ) : (
               <p className="mt-4 text-sm text-slate-400">
                 {detail.booking?.status === "cancelled"
@@ -242,34 +259,21 @@ export default async function CheckDetailPage({
               processing without implying that the refund is already complete.
             </p>
             {detail.booking && primaryDeposit && cancelledBookingNeedsRefund ? (
-              <form action={markDepositForRefund} className="mt-4 space-y-3">
-                <input type="hidden" name="checkId" value={detail.check.id} />
-                <input
-                  type="hidden"
-                  name="externalCheckRef"
-                  value={detail.check.externalCheckRef}
-                />
-                <input type="hidden" name="bookingRef" value={detail.booking.bookingRef} />
-                <input type="hidden" name="depositRef" value={primaryDeposit.depositRef} />
-                <input type="hidden" name="amountCents" value={refundableDepositAmount} />
-                <p className="rounded-xl border border-white/8 bg-black/10 px-4 py-3 text-sm text-slate-300">
-                  Marking {formatMoney(refundableDepositAmount)} from {primaryDeposit.depositRef}{" "}
-                  as refund pending for cancelled booking {detail.booking.bookingRef}
-                </p>
-                <textarea
-                  name="reason"
-                  required
-                  minLength={10}
-                  className="min-h-28 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
-                  placeholder="Reason for marking the deposit for refund"
-                />
-                <button
-                  type="submit"
-                  className="rounded-full border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-100 transition hover:border-rose-400 hover:bg-rose-500/15"
-                >
-                  Mark Deposit For Refund
-                </button>
-              </form>
+              <GuardedActionForm
+                action={markDepositForRefund}
+                hiddenFields={[
+                  { name: "checkId", value: detail.check.id },
+                  { name: "externalCheckRef", value: detail.check.externalCheckRef },
+                  { name: "bookingRef", value: detail.booking.bookingRef },
+                  { name: "depositRef", value: primaryDeposit.depositRef },
+                  { name: "amountCents", value: refundableDepositAmount },
+                ]}
+                summary={`Marking ${formatMoney(refundableDepositAmount)} from ${primaryDeposit.depositRef} as refund pending for cancelled booking ${detail.booking.bookingRef}`}
+                placeholder="Reason for marking the deposit for refund"
+                buttonLabel="Mark Deposit For Refund"
+                pendingLabel="Marking Refund Pending..."
+                buttonClassName="rounded-full border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-100 transition hover:border-rose-400 hover:bg-rose-500/15"
+              />
             ) : (
               <p className="mt-4 text-sm text-slate-400">
                 No cancelled-booking deposit refund action is currently required for this
